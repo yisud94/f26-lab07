@@ -18,15 +18,49 @@ observable result it pins. Not "recurring bookings work". Green against the
 shipped code, and you did not edit or delete an existing test method to get
 there.
 
+`src/test/java/edu/cmu/cs214/scheduling/workflow/BookingWorkflowCharacterizationTest.java`,
+`recurringSubmitSkipsAWeekThatOnlyTouchesAnExistingBooking`. It pins that
+`BookingWorkflow.submit` on a `RECURRING` request skips a week whose slot only
+touches an existing booking (existing 08:00–09:00 and series 09:00–10:00 on
+2026-10-12). The outcome lists that slot in `getSkipped()`, books weeks 1 and 3
+with occurrence indices 1 and 3, reports `"series S-1: 2 booked, 1 skipped"`,
+and sends 2 occurrence notifications. The suite is 36/36 green on the shipped
+code (`cedea51`). It is a new test class, and no existing test was touched.
+
 **Why that one, and does a shipped test already cover it?** Of everything
 `BookingWorkflow` does, why is this the behavior worth a test? If something
 shipped comes close, say what your pin adds. If nothing does, say how you
 checked.
 
+`submit` has the same overlap test written three times. The `REGULAR` and
+`BLOCKED` branches use strict `<`, but the `RECURRING` branch uses `<=`, so the
+series treats touching slots as a clash. `TimeSlot`'s javadoc says the end is
+exclusive, so the series path disagrees with the documented model. Any
+reasonable refactor of this class ends with one `overlaps(slot, booking)`
+helper, and that helper will use `<`. The result would still compile and look
+right, but it would quietly change which weeks a series books. That is the
+change most likely to slip past review, so it is the one worth pinning.
+
+The closest shipped test is `regularSubmitAcceptsASlotThatStartsWhenAnotherEnds`,
+which pins the boundary on the *regular* path only. No shipped test calls
+`getSkipped()` or builds a series against an existing booking. I checked that
+by grepping `src/test` for `skipped`/`getSkipped` and for every `recurring(`
+call: all four build the series in an empty room. I also flipped the two `<=`
+in the `RECURRING` branch to `<` and ran the suite. Only the pin failed (35
+shipped green, 1 red), then I reverted.
+
 **What a regeneration would do differently here.** Suppose someone
 threw this class away and regenerated it from a one-line description of what a
 booking workflow does. Name the decision that would be made a second time, and
 say which way it would probably go.
+
+The decision is whether two slots that touch at the boundary conflict. A
+regeneration would decide that once, for all booking types, and would almost
+certainly choose half-open intervals (touching is fine). That follows
+`TimeSlot`'s own javadoc and the regular-path test. The series path's
+inclusive comparison would disappear: the new code would book weeks a member
+used to see skipped. Whether the `<=` is a bug or a deliberate buffer between a
+series and the meeting before it, the shipped code doesn't say.
 
 ### The directive
 
