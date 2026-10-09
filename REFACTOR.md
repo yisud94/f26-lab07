@@ -91,7 +91,56 @@ you read the diff.
 would have been the better call, using the lecture's four questions (test
 coverage, code age, spec quality, and reach). Be concrete about this codebase.
 
+No. Refactoring was the right call. All four questions point the same way.
+
+- **Test coverage: thin where a rewrite would drift.** 18 shipped tests, and
+  they mostly check *counts* (`hub.getOutbox().size()`, `activeInRoom(...).size()`)
+  and `isAccepted()`. No shipped test reads a notification's text, a
+  rejection's `getMessage()`, or `getSkipped()`.
+  `recurringCancelReleasesTheOccurrence` cancels the *last* occurrence, so it
+  can't tell "cancel this one" from "cancel this one and every later one",
+  which is what `cancel` actually does. Nothing checks `MAX_SERIES_WEEKS`.
+  A regenerated class could pass all 35 shipped tests and still change every
+  message, the cancellation rule, and the series boundary. My pin catches
+  only the last of those.
+- **Code age: no history to learn from.** The repo has one commit (`cedea51`,
+  2026-10-06). There is no log or issue explaining why the `RECURRING` branch
+  uses `<=`, why a series skips the per-member double-booking check that
+  `REGULAR` does, or why cancelling an occurrence takes the later ones with it.
+  When intent can't be recovered, the code is the only record of it. A
+  refactor keeps that record. A regeneration throws it away.
+- **Spec quality: one sentence, and it contradicts the code.** The whole spec
+  is the README line ("Members book rooms one slot at a time or as a weekly
+  series…") plus thin javadoc. `TimeSlot` says the end is exclusive, but the
+  recurring path treats it as inclusive. A regeneration from that spec has to
+  re-decide each of these questions (touching slots, member conflicts inside a
+  series, how far a cancel reaches), and it would answer them "cleanly", which
+  means differently.
+- **Reach: everything flows through this class.** The README says every write
+  to the store and every notification goes through `BookingWorkflow`.
+  `ReportService` reads what it wrote (`isCancelled()`, `getType()`, series
+  occurrences), so a changed cancel rule changes occupancy and revenue reports.
+  The notification text goes to members' inboxes. `ReportServiceTest` and
+  `NotificationHubTest` both build their fixtures through `submit`/`cancel`.
+  A behavior change here spreads to three packages and to users.
+
+The refactor showed that the problem was *structural*. The same four-way
+`switch` was repeated, and inside each branch the logic was fine. Moving each
+branch body verbatim into `RegularHandler`/`RecurringHandler`/`BlockedHandler`
+fixed the structure and kept every decision, including the ones nobody can
+explain. A regeneration would have fixed the structure too, but it would also
+have re-made those decisions, with tests too coarse to notice.
+
 **What would flip your answer.** A condition about the artifact, not a feeling.
+
+A written spec that answers the open decisions: whether touching slots
+conflict, whether a series checks member conflicts, and how far a cancel
+reaches. Plus tests that assert the observable outputs (outcome messages,
+notification recipient/subject/body, `getSkipped()`, which occurrences a
+cancel releases), so the suite pins *what* the class does, not just *how
+many*. With both in place, a regenerated class could be checked against
+something other than the old code, and regenerating would be cheaper than
+another refactor.
 
 ---
 
