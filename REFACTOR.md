@@ -42,7 +42,7 @@ right, but it would quietly change which weeks a series books. That is the
 change most likely to slip past review, so it is the one worth pinning.
 
 The closest shipped test is `regularSubmitAcceptsASlotThatStartsWhenAnotherEnds`,
-which pins the boundary on the *regular* path only. No shipped test calls
+which pins the boundary on the _regular_ path only. No shipped test calls
 `getSkipped()` or builds a series against an existing booking. I checked that
 by grepping `src/test` for `skipped`/`getSkipped` and for every `recurring(`
 call: all four build the series in an empty room. I also flipped the two `<=`
@@ -68,6 +68,11 @@ series and the meeting before it, the shipped code doesn't say.
 in the handout) and paste the directive you gave the agent, including the scope
 you set, meaning which files and packages were in bounds, which were not, and
 one line on why the boundary sits where it does.
+Name of refactor: Replace Conditional with Polymorphism.
+
+Pick one named refactor from the menu. Replace the conditional with polymorphism, or extract a class per booking type. Whichever you pick must remove the repeated type-conditional across all four methods. Extracting one helper out of one method does not clear the bar. Behavior must not change:
+no signature changes, no files touched besides BookingWorkflow,
+no test edits. Run the suite and show me the diff.
 
 ### The result
 
@@ -75,15 +80,69 @@ one line on why the boundary sits where it does.
 `git diff`, a branch), and the totals line (the shipped count plus your pin,
 all green).
 
+A commit with only BookingWorkflow changed. +255 -198
+
+[INFO] Scanning for projects...
+[INFO]
+[INFO] -----------------< edu.cmu.cs214:lab07-roomscheduler >------------------
+[INFO] Building lab07-roomscheduler 1.0.0
+[INFO] from pom.xml
+[INFO] --------------------------------[ jar ]---------------------------------
+[INFO]
+[INFO] --- resources:3.4.0:resources (default-resources) @ lab07-roomscheduler ---
+[INFO] skip non existing resourceDirectory /Users/yisuding/Documents/labs17214/f26-lab07/src/main/resources
+[INFO]
+[INFO] --- compiler:3.13.0:compile (default-compile) @ lab07-roomscheduler ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO]
+[INFO] --- resources:3.4.0:testResources (default-testResources) @ lab07-roomscheduler ---
+[INFO] skip non existing resourceDirectory /Users/yisuding/Documents/labs17214/f26-lab07/src/test/resources
+[INFO]
+[INFO] --- compiler:3.13.0:testCompile (default-testCompile) @ lab07-roomscheduler ---
+[INFO] Nothing to compile - all classes are up to date.
+[INFO]
+[INFO] --- surefire:3.5.6:test (default-test) @ lab07-roomscheduler ---
+[INFO] Using auto detected provider org.apache.maven.surefire.junitplatform.JUnitPlatformProvider
+[INFO]
+[INFO] -------------------------------------------------------
+[INFO] T E S T S
+[INFO] -------------------------------------------------------
+[INFO] Running edu.cmu.cs214.scheduling.notify.NotificationHubTest
+[INFO] Tests run: 4, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.033 s -- in edu.cmu.cs214.scheduling.notify.NotificationHubTest
+[INFO] Running edu.cmu.cs214.scheduling.reporting.ReportServiceTest
+[INFO] Tests run: 7, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.008 s -- in edu.cmu.cs214.scheduling.reporting.ReportServiceTest
+[INFO] Running edu.cmu.cs214.scheduling.workflow.BookingWorkflowCharacterizationTest
+[INFO] Tests run: 1, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.004 s -- in edu.cmu.cs214.scheduling.workflow.BookingWorkflowCharacterizationTest
+[INFO] Running edu.cmu.cs214.scheduling.workflow.BookingWorkflowTest
+[INFO] Tests run: 18, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.017 s -- in edu.cmu.cs214.scheduling.workflow.BookingWorkflowTest
+[INFO] Running edu.cmu.cs214.scheduling.pricing.PriceCalculatorTest
+[INFO] Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.005 s -- in edu.cmu.cs214.scheduling.pricing.PriceCalculatorTest
+[INFO]
+[INFO] Results:
+[INFO]
+[INFO] Tests run: 36, Failures: 0, Errors: 0, Skipped: 0
+[INFO]
+[INFO] ------------------------------------------------------------------------
+[INFO] BUILD SUCCESS
+[INFO] ------------------------------------------------------------------------
+[INFO] Total time: 0.640 s
+[INFO] Finished at: 2026-10-09T10:25:45-04:00
+[INFO] ------------------------------------------------------------------------
+
 **What did NOT change: behavior and files.** The observable behavior you
 checked is still the same, including anything that surprised you while reading.
 Which files outside the scope are untouched, and how you verified that rather
 than assumed it. If the agent reached outside the directive, say where and what
 you did about it.
 
+I verified it by both asking the agent to show me the diff and having it tell me what it kept on purpose and what it removed. I verified that the things the agent added are indeed within BookingWorkflow.java and within scope.
+
+Then, I looked at the git diff file on GitHub. I verified that the change only occurred in BookingWorkflow and that the change matches the agent's description.
+
 **One thing the agent changed that you had to look at twice.** Something you
 checked line by line before accepting. If there was nothing, say how carefully
 you read the diff.
+I had to look twice at what it imported and the data structure (which is a map) it chose. It was told in class that importing any libraries in a refactor could be problematic. Thus, I thoroughly examined why the map was chosen and how the map was built and used. After seeing that the map is correctly constructed and didn't change the behavior of the code, I accepted it.
 
 ### The closing explanation
 
@@ -94,10 +153,10 @@ coverage, code age, spec quality, and reach). Be concrete about this codebase.
 No. Refactoring was the right call. All four questions point the same way.
 
 - **Test coverage: thin where a rewrite would drift.** 18 shipped tests, and
-  they mostly check *counts* (`hub.getOutbox().size()`, `activeInRoom(...).size()`)
+  they mostly check _counts_ (`hub.getOutbox().size()`, `activeInRoom(...).size()`)
   and `isAccepted()`. No shipped test reads a notification's text, a
   rejection's `getMessage()`, or `getSkipped()`.
-  `recurringCancelReleasesTheOccurrence` cancels the *last* occurrence, so it
+  `recurringCancelReleasesTheOccurrence` cancels the _last_ occurrence, so it
   can't tell "cancel this one" from "cancel this one and every later one",
   which is what `cancel` actually does. Nothing checks `MAX_SERIES_WEEKS`.
   A regenerated class could pass all 35 shipped tests and still change every
@@ -124,7 +183,7 @@ No. Refactoring was the right call. All four questions point the same way.
   `NotificationHubTest` both build their fixtures through `submit`/`cancel`.
   A behavior change here spreads to three packages and to users.
 
-The refactor showed that the problem was *structural*. The same four-way
+The refactor showed that the problem was _structural_. The same four-way
 `switch` was repeated, and inside each branch the logic was fine. Moving each
 branch body verbatim into `RegularHandler`/`RecurringHandler`/`BlockedHandler`
 fixed the structure and kept every decision, including the ones nobody can
@@ -137,8 +196,8 @@ A written spec that answers the open decisions: whether touching slots
 conflict, whether a series checks member conflicts, and how far a cancel
 reaches. Plus tests that assert the observable outputs (outcome messages,
 notification recipient/subject/body, `getSkipped()`, which occurrences a
-cancel releases), so the suite pins *what* the class does, not just *how
-many*. With both in place, a regenerated class could be checked against
+cancel releases), so the suite pins _what_ the class does, not just _how
+many_. With both in place, a regenerated class could be checked against
 something other than the old code, and regenerating would be cheaper than
 another refactor.
 
@@ -200,8 +259,8 @@ the code that settles it.
   from the hub's own constructor (`NotificationHub.java:23`). So there is
   always exactly one subscriber, which `hubDeliversToItsOneSubscriber` pins at
   1. The hub isn't decoupled from that receiver either: it holds the same
-  `Outbox` directly (`NotificationHub.java:11, 21`) and returns it from
-  `getOutbox()`, which is what every caller reads.
+     `Outbox` directly (`NotificationHub.java:11, 21`) and returns it from
+     `getOutbox()`, which is what every caller reads.
 
 All four layers together do one thing:
 `outbox.append("To: … | Subject: … | body")`.
@@ -283,8 +342,8 @@ about the requirement, not about the pattern.
   recipient. Each format is self-contained and independently testable, so a
   `render(NotificationMessage)` interface with an email and an SMS
   implementation is the right shape.
-- **Observer (subscriber list).** "Facilities wants every *Room blocked*/*Block
-  released* notice also posted to their Slack channel, and audit wants every
+- **Observer (subscriber list).** "Facilities wants every _Room blocked_/_Block
+  released_ notice also posted to their Slack channel, and audit wants every
   notice written to a compliance log. Both are switched on per deployment."
   The receivers are now several, owned by different teams, and decided at
   startup rather than in `NotificationHub`. `subscribe(...)` with a
