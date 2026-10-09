@@ -324,4 +324,16 @@ Read `pricing/`. Not coded, one sentence.
 **The pattern.** Which one fits `PriceCalculator`, and the problem that makes
 it fit. Name the problem.
 
+Decorator fits, because `price()` is a base hourly amount put through an
+ordered series of independent adjustments (weekend surcharge, then
+long-booking discount, then tier discount), each compounding on the running
+total in a published order that `everyRuleAppliesInOrder` pins, so every new
+rule (a promo code, a holiday rate) currently means editing that one method
+and re-deciding where in the sequence it lands.
+
 **Would you apply it today?** Yes or no, one line, with the reason.
+
+No. There are three fixed adjustments in about twenty lines of one method,
+six tests pin the result, and no new rule has been asked for, so a wrapper
+class per rule would scatter one readable sequence across construction code
+with nothing gained.
